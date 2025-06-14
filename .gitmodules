@@ -1,0 +1,9 @@
+[submodule "smart_contract/lib/ccip"]
+	path = smart_contract/lib/ccip
+	url = https://github.com/smartcontractkit/ccip
+[submodule "smart_contract/lib/chainlink"]
+	path = smart_contract/lib/chainlink
+	url = https://github.com/smartcontractkit/chainlink
+[submodule "smart_contract/lib/openzeppelin-contracts"]
+	path = smart_contract/lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
