@@ -3,7 +3,7 @@ import { AbiItem } from 'web3-utils';
 import { BlockNumber } from 'web3-core';
 import dotenv from 'dotenv';
 import config from '../configs/config';
-import abi from '../abi/dezenmartAbi.json';
+import abi from '../abi/DezentraAbi.json';
 
 dotenv.config();
 
@@ -28,7 +28,7 @@ export interface Trade {
   parentTradeId: string;
 }
 
-export class DezenMartContractService {
+export class DezentraContractService {
   private kit: ContractKit;
   private contractAddress: string;
   private usdtAddress: string;
@@ -58,7 +58,7 @@ export class DezenMartContractService {
   // Get contract instance
   private async getContract() {
     return new this.kit.web3.eth.Contract(
-      abi.DEZENMART_ABI as AbiItem[],
+      abi.Dezentra_ABI as AbiItem[],
       this.contractAddress,
     );
   }

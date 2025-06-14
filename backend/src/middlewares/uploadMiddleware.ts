@@ -19,7 +19,7 @@ const storage = new CloudinaryStorage({
     }
 
     return {
-      folder: `dezenmart/${folderName}`,
+      folder: `Dezentra/${folderName}`,
       allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4'],
       // transformation: [{ width: 500, height: 500, crop: 'limit' }], // Optional: transformations
       public_id: `${file.fieldname}-${Date.now()}-${path.parse(file.originalname).name}`,

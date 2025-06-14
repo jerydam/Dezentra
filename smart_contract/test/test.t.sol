@@ -5,8 +5,8 @@
 // import "../src/logistic.sol";
 // import "../src/token.sol";
 
-// contract DezenMartLogisticsTest is Test {
-//     DezenMartLogistics logistics;
+// contract DezentraLogisticsTest is Test {
+//     DezentraLogistics logistics;
 //     Tether usdt;
 //     address admin = address(0x1);
 //     address seller = address(0x2);
@@ -24,9 +24,9 @@
 //         vm.prank(admin);
 //         usdt = new Tether();
 
-//         // Deploy DezenMartLogistics contract
+//         // Deploy DezentraLogistics contract
 //         vm.prank(admin);
-//         logistics = new DezenMartLogistics(address(usdt));
+//         logistics = new DezentraLogistics(address(usdt));
 
 //         // Register logistics provider
 //         vm.prank(admin);
@@ -46,7 +46,7 @@
 //         uint256 tradeId = logistics.createTrade(PRODUCT_COST, logisticsProvider, LOGISTICS_COST, true, TOTAL_QUANTITY);
 
 //         // Access specific fields to reduce stack usage
-//         DezenMartLogistics.Trade memory trade = logistics.trades(tradeId);
+//         DezentraLogistics.Trade memory trade = logistics.trades(tradeId);
 //         assertEq(trade.seller, seller);
 //         assertEq(trade.productCost, PRODUCT_COST);
 //         assertEq(trade.logisticsCost, LOGISTICS_COST);
@@ -68,7 +68,7 @@
 //         uint256 tradeId = logistics.buyTrade(parentTradeId, quantity);
 
 //         // Check buyer's trade
-//         DezenMartLogistics.Trade memory trade = logistics.trades(tradeId);
+//         DezentraLogistics.Trade memory trade = logistics.trades(tradeId);
 //         assertEq(trade.buyer, buyer);
 //         assertEq(trade.seller, seller);
 //         assertEq(trade.productCost, PRODUCT_COST * quantity);
@@ -78,7 +78,7 @@
 //         assertEq(trade.parentTradeId, parentTradeId);
 
 //         // Check original trade's remaining quantity
-//         DezenMartLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
+//         DezentraLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
 //         assertEq(parentTrade.remainingQuantity, TOTAL_QUANTITY - quantity);
 
 //         // Check buyer's trade list
@@ -106,7 +106,7 @@
 //         assertTrue(tradeId1 != tradeId2, "Trade IDs should be different");
 
 //         // Check first trade
-//         DezenMartLogistics.Trade memory trade1 = logistics.trades(tradeId1);
+//         DezentraLogistics.Trade memory trade1 = logistics.trades(tradeId1);
 //         assertEq(trade1.buyer, buyer);
 //         assertEq(trade1.seller, seller);
 //         assertEq(trade1.productCost, PRODUCT_COST * quantity1);
@@ -115,7 +115,7 @@
 //         assertEq(trade1.parentTradeId, parentTradeId);
 
 //         // Check second trade
-//         DezenMartLogistics.Trade memory trade2 = logistics.trades(tradeId2);
+//         DezentraLogistics.Trade memory trade2 = logistics.trades(tradeId2);
 //         assertEq(trade2.buyer, buyer);
 //         assertEq(trade2.seller, seller);
 //         assertEq(trade2.productCost, PRODUCT_COST * quantity2);
@@ -124,7 +124,7 @@
 //         assertEq(trade2.parentTradeId, parentTradeId);
 
 //         // Check original trade's remaining quantity
-//         DezenMartLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
+//         DezentraLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
 //         assertEq(parentTrade.remainingQuantity, TOTAL_QUANTITY - (quantity1 + quantity2));
 
 //         // Check buyer's trade list
@@ -157,7 +157,7 @@
 //         assertTrue(tradeId1 != tradeId2, "Trade IDs should be different");
 
 //         // Check second trade
-//         DezenMartLogistics.Trade memory trade2 = logistics.trades(tradeId2);
+//         DezentraLogistics.Trade memory trade2 = logistics.trades(tradeId2);
 //         assertEq(trade2.buyer, buyer);
 //         assertEq(trade2.seller, seller);
 //         assertEq(trade2.productCost, PRODUCT_COST * quantity2);
@@ -166,7 +166,7 @@
 //         assertEq(trade2.parentTradeId, parentTradeId);
 
 //         // Check original trade's remaining quantity
-//         DezenMartLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
+//         DezentraLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
 //         assertEq(parentTrade.remainingQuantity, TOTAL_QUANTITY - (quantity1 + quantity2));
 //     }
 
@@ -175,7 +175,7 @@
 //         uint256 tradeId = logistics.createTrade(PRODUCT_COST, logisticsProvider, LOGISTICS_COST, false, TOTAL_QUANTITY);
 
 //         // Access specific fields to reduce stack usage
-//         DezenMartLogistics.Trade memory trade = logistics.trades(tradeId);
+//         DezentraLogistics.Trade memory trade = logistics.trades(tradeId);
 //         assertEq(trade.seller, seller);
 //         assertEq(trade.productCost, PRODUCT_COST);
 //         assertEq(trade.logisticsCost, LOGISTICS_COST);
@@ -199,7 +199,7 @@
 //         uint256 tradeId = logistics.buyTrade{value: totalAmount}(parentTradeId, quantity);
 
 //         // Check buyer's trade
-//         DezenMartLogistics.Trade memory trade = logistics.trades(tradeId);
+//         DezentraLogistics.Trade memory trade = logistics.trades(tradeId);
 //         assertEq(trade.buyer, buyer);
 //         assertEq(trade.seller, seller);
 //         assertEq(trade.productCost, PRODUCT_COST * quantity);
@@ -209,7 +209,7 @@
 //         assertEq(trade.parentTradeId, parentTradeId);
 
 //         // Check original trade's remaining quantity
-//         DezenMartLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
+//         DezentraLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
 //         assertEq(parentTrade.remainingQuantity, TOTAL_QUANTITY - quantity);
 //     }
 
@@ -236,7 +236,7 @@
 //         assertTrue(tradeId1 != tradeId2, "Trade IDs should be different");
 
 //         // Check first trade
-//         DezenMartLogistics.Trade memory trade1 = logistics.trades(tradeId1);
+//         DezentraLogistics.Trade memory trade1 = logistics.trades(tradeId1);
 //         assertEq(trade1.buyer, buyer);
 //         assertEq(trade1.seller, seller);
 //         assertEq(trade1.productCost, PRODUCT_COST * quantity1);
@@ -245,7 +245,7 @@
 //         assertEq(trade1.parentTradeId, parentTradeId);
 
 //         // Check second trade
-//         DezenMartLogistics.Trade memory trade2 = logistics.trades(tradeId2);
+//         DezentraLogistics.Trade memory trade2 = logistics.trades(tradeId2);
 //         assertEq(trade2.buyer, buyer);
 //         assertEq(trade2.seller, seller);
 //         assertEq(trade2.productCost, PRODUCT_COST * quantity2);
@@ -254,7 +254,7 @@
 //         assertEq(trade2.parentTradeId, parentTradeId);
 
 //         // Check original trade's remaining quantity
-//         DezenMartLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
+//         DezentraLogistics.Trade memory parentTrade = logistics.trades(parentTradeId);
 //         assertEq(parentTrade.remainingQuantity, TOTAL_QUANTITY - (quantity1 + quantity2));
 //     }
 

@@ -5,7 +5,7 @@ import "../lib/chainlink/contracts-ccip/src/v0.8/CCIPReceiver.sol";
 import "../lib/chainlink/contracts/src/v0.8/shared/access/OwnerIsCreator.sol";
 import "../lib/chainlink/contracts-ccip/src/v0.8/libraries/Client.sol";
 contract CCIPMessageReceiver is CCIPReceiver, OwnerIsCreator {
-    // Enums and structs matching DezenMartLogistics
+    // Enums and structs matching DezentraLogistics
     enum MessageType {
         CREATE_TRADE,
         BUY_TRADE,

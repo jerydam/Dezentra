@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Script, console} from "forge-std/Script.sol";
-import {DezenMartLogistics} from "../src/logistic.sol";
+import {DezentraLogistics} from "../src/logistic.sol";
 import {Tether} from "../src/token.sol";
 
 contract Deploy is Script {
@@ -18,9 +18,9 @@ contract Deploy is Script {
         Tether usdt = new Tether();
         console.log("Tether deployed at:", address(usdt));
 
-        // Deploy DezenMartLogistics with Tether address
-        DezenMartLogistics logistics = new DezenMartLogistics(address(usdt));
-        console.log("DezenMartLogistics deployed at:", address(logistics));
+        // Deploy DezentraLogistics with Tether address
+        DezentraLogistics logistics = new DezentraLogistics(address(usdt));
+        console.log("DezentraLogistics deployed at:", address(logistics));
 
         // Stop broadcasting
         vm.stopBroadcast();

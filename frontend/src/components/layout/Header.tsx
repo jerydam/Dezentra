@@ -71,11 +71,11 @@ const Header = () => {
             <img
               src={Logo}
               className="w-full transition-transform group-hover:scale-110 object-cover object-[25%_25%]"
-              alt="DezenMart"
+              alt="Dezentra"
             />
           </div>
           <span className="ml-2 text-white font-medium hidden md:inline transition-opacity group-hover:opacity-90">
-            DezenMart
+            Dezentra
           </span>
         </Link>
 

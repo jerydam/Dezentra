@@ -5,7 +5,7 @@ import { WebSocketService } from './services/webSocketService';
 import { NotificationService } from './services/notificationService';
 import { OrderService } from './services/orderService';
 import { RewardService } from './services/rewardService';
-import { DezenMartContractService } from './services/contractService';
+import { DezentraContractService } from './services/contractService';
 
 const PORT = config.PORT;
 
@@ -15,7 +15,7 @@ const webSocketService = new WebSocketService(server);
 NotificationService.initialize(webSocketService);
 RewardService.initialize(webSocketService);
 
-export const contractService = new DezenMartContractService();
+export const contractService = new DezentraContractService();
 
 // contractService.listenForEvents().catch((error) => {
 //   console.error('Error listening for events:', error);

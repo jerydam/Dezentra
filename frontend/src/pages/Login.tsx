@@ -144,7 +144,7 @@ const Login = () => {
           <div className="flex flex-col gap-8">
             <img
               src={Logo}
-              alt="Dezenmart Logo"
+              alt="Dezentra Logo"
               className="w-[75px] h-[75px] mx-auto"
             />
             <h2 className="text-2xl text-white font-bold mb-6">

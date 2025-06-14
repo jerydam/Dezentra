@@ -16,7 +16,7 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import { celo, celoAlfajores } from 'viem/chains';
 import dotenv from 'dotenv';
-import abi from '../abi/dezenmartAbi.json';
+import abi from '../abi/DezentraAbi.json';
 import config from '../configs/config';
 import { StringDecoder } from 'string_decoder';
 
@@ -87,7 +87,7 @@ const USDT_ABI = [
   },
 ] as const;
 
-export class DezenMartContractService {
+export class DezentraContractService {
   private publicClient;
   private walletClient;
   private account;
@@ -124,7 +124,7 @@ export class DezenMartContractService {
     // Initialize contract instances
     this.contract = getContract({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       client: {
         public: this.publicClient,
         wallet: this.walletClient,
@@ -154,7 +154,7 @@ export class DezenMartContractService {
   private async readContract(functionName: string, args: any[] = []) {
     return await this.publicClient.readContract({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       functionName,
       args,
     });
@@ -165,7 +165,7 @@ export class DezenMartContractService {
     this.ensureWalletClient();
     return await this.walletClient!.writeContract({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       functionName,
       args,
     });
@@ -347,7 +347,7 @@ export class DezenMartContractService {
     const tradeCreatedEvent = receipt.logs.find((log) => {
       try {
         const decoded = decodeEventLog({
-          abi: abi.DEZENMART_ABI,
+          abi: abi.Dezentra_ABI,
           data: log.data,
           topics: log.topics,
         });
@@ -362,7 +362,7 @@ export class DezenMartContractService {
     }
 
     const decoded = decodeEventLog({
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       data: tradeCreatedEvent.data,
       topics: tradeCreatedEvent.topics,
     });
@@ -423,7 +423,7 @@ export class DezenMartContractService {
     const purchaseCreatedEvent = receipt.logs.find((log) => {
       try {
         const decoded = decodeEventLog({
-          abi: abi.DEZENMART_ABI,
+          abi: abi.Dezentra_ABI,
           data: log.data,
           topics: log.topics,
         });
@@ -438,7 +438,7 @@ export class DezenMartContractService {
     }
 
     const decoded = decodeEventLog({
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       data: purchaseCreatedEvent.data,
       topics: purchaseCreatedEvent.topics,
     });
@@ -490,13 +490,13 @@ export class DezenMartContractService {
   ): Promise<() => void> {
     const unwatch = this.publicClient.watchContractEvent({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       eventName: 'TradeCreated',
       onLogs: (logs) => {
         logs.forEach((log) => {
           try {
             const decoded = decodeEventLog({
-              abi: abi.DEZENMART_ABI,
+              abi: abi.Dezentra_ABI,
               data: log.data,
               topics: log.topics,
             });
@@ -524,13 +524,13 @@ export class DezenMartContractService {
   ): Promise<() => void> {
     const unwatch = this.publicClient.watchContractEvent({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       eventName: 'PurchaseCreated',
       onLogs: (logs) => {
         logs.forEach((log) => {
           try {
             const decoded = decodeEventLog({
-              abi: abi.DEZENMART_ABI,
+              abi: abi.Dezentra_ABI,
               data: log.data,
               topics: log.topics,
             });
@@ -553,13 +553,13 @@ export class DezenMartContractService {
   ): Promise<() => void> {
     const unwatch = this.publicClient.watchContractEvent({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       eventName: 'DeliveryConfirmed',
       onLogs: (logs) => {
         logs.forEach((log) => {
           try {
             const decoded = decodeEventLog({
-              abi: abi.DEZENMART_ABI,
+              abi: abi.Dezentra_ABI,
               data: log.data,
               topics: log.topics,
             });
@@ -582,13 +582,13 @@ export class DezenMartContractService {
   ): Promise<() => void> {
     const unwatch = this.publicClient.watchContractEvent({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       eventName: 'DisputeRaised',
       onLogs: (logs) => {
         logs.forEach((log) => {
           try {
             const decoded = decodeEventLog({
-              abi: abi.DEZENMART_ABI,
+              abi: abi.Dezentra_ABI,
               data: log.data,
               topics: log.topics,
             });
@@ -611,13 +611,13 @@ export class DezenMartContractService {
   ): Promise<() => void> {
     const unwatch = this.publicClient.watchContractEvent({
       address: config.CONTRACT_ADDRESS as `0x${string}`,
-      abi: abi.DEZENMART_ABI,
+      abi: abi.Dezentra_ABI,
       eventName: 'DisputeResolved',
       onLogs: (logs) => {
         logs.forEach((log) => {
           try {
             const decoded = decodeEventLog({
-              abi: abi.DEZENMART_ABI,
+              abi: abi.Dezentra_ABI,
               data: log.data,
               topics: log.topics,
             });
@@ -692,15 +692,15 @@ export class DezenMartContractService {
 }
 
 // Factory function for easy initialization
-// export function createDezenMartService(
+// export function createDezentraService(
 //   config: ContractConfig,
-// ): DezenMartContractService {
-//   return new DezenMartContractService(config);
+// ): DezentraContractService {
+//   return new DezentraContractService(config);
 // }
 
 // Usage example:
 /*
-const contractService = createDezenMartService({
+const contractService = createDezentraService({
   contractAddress: '0x...',
   usdtAddress: '0x...',
   privateKey: '0x...',
