@@ -1,19 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import Container from "../components/common/Container";
 import { IoChevronBackOutline, IoSearch } from "react-icons/io5";
 import ProductList from "../components/product/ProductList";
-import { useProductData } from "../utils/hooks/useProductData";
+import { useProductData } from "../utils/hooks/useProduct";
 import { debounce } from "../utils/helpers";
 import ProductCard from "../components/product/ProductCard";
+import { useWeb3 } from "../context/Web3Context";
 
-// categories
 const categories = [
-  "All",
-  "Clothing",
-  "Cosmetics",
   "Electronics",
-  "Home",
+  "Clothing",
+  "Home & Garden",
+  "Beauty & Personal Care",
+  "Sports & Outdoors",
+  "Art Work",
   "Accessories",
 ];
 
@@ -22,16 +23,50 @@ const Product = () => {
   const location = useLocation();
   const params = useParams();
   const categoryParam = params.categoryName;
-  const { searchProducts, searchResults, loading } = useProductData();
+  const { wallet, chainId, isCorrectNetwork } = useWeb3();
 
+  const {
+    searchProducts,
+    searchResults,
+    loading,
+    fetchAllProducts,
+    fetchSponsoredProducts,
+  } = useProductData({
+    chainId,
+    isConnected: wallet.isConnected && isCorrectNetwork,
+  });
+
+  const [isSearching, setIsSearching] = useState(false);
   const [activeCategory, setActiveCategory] = useState(categoryParam || "All");
-  const debouncedSearch = debounce(async (query: string) => {
-    if (query.trim()) {
-      await searchProducts(query);
-    }
-  }, 300);
 
-  // Update active category when URL changes
+  // search
+  const debouncedSearch = useMemo(
+    () =>
+      debounce(async (query: string) => {
+        if (query.trim()) {
+          setIsSearching(true);
+          try {
+            await searchProducts(query);
+          } finally {
+            setIsSearching(false);
+          }
+        }
+      }, 300),
+    [searchProducts]
+  );
+
+  // Load initial data
+  useEffect(() => {
+    const loadData = async () => {
+      await Promise.all([
+        fetchAllProducts(false, false, true),
+        fetchSponsoredProducts(false, false, true),
+      ]);
+    };
+    loadData();
+  }, [fetchAllProducts, fetchSponsoredProducts]);
+
+  // Update active category based on URL
   useEffect(() => {
     if (categoryParam) {
       const formattedCategory =
@@ -42,49 +77,80 @@ const Product = () => {
     }
   }, [categoryParam, location]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    debouncedSearch(query);
-  };
+  const handleSearch = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const query = e.target.value;
+      setSearchQuery(query);
+      debouncedSearch(query);
+    },
+    [debouncedSearch]
+  );
+
+  const handleGoBack = useCallback(() => {
+    window.history.back();
+  }, []);
+
+  const searchResultsWithNew = useMemo(() => {
+    return searchResults
+      .map((product) => {
+        if (!product) return null;
+
+        const isNew = (() => {
+          const createdDate = new Date(product.createdAt);
+          const now = new Date();
+          const diffInMs = now.getTime() - createdDate.getTime();
+          const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+          return diffInDays < 7;
+        })();
+
+        return { product, isNew };
+      })
+      .filter((item) => item !== null);
+  }, [searchResults]);
+
+  const isAllCategory = activeCategory === "All";
 
   return (
     <div className="bg-Dark min-h-screen">
       <Container>
-        {/* Content based on active category */}
-        {activeCategory === "All" ? (
+        {isAllCategory ? (
           <>
             <h2 className="text-white font-bold text-2xl mb-6">
               Browse Products
             </h2>
+
             {/* Search Bar */}
             <div className="flex justify-center items-center gap-3 bg-[#292B30] outline-none border-0 rounded-lg px-4 py-3">
               <IoSearch className="text-white text-xl" />
               <input
                 type="text"
                 placeholder="Search Dezentra"
-                className="w-full rounded-none bg-[#292B30] outline-none text-white"
+                className="w-full rounded-none bg-[#292B30] outline-none text-white placeholder-gray-400"
                 value={searchQuery}
                 onChange={handleSearch}
               />
             </div>
 
-            {/* Display search results if there's a query */}
+            {/* Search Results */}
             {searchQuery && (
               <div className="mt-8">
                 <div className="text-white text-xl mb-4">
-                  {loading
+                  {isSearching
                     ? "Searching..."
                     : `Search results for "${searchQuery}"`}
                 </div>
-                {!loading && searchResults.length > 0 ? (
+                {!isSearching && searchResultsWithNew.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 md:gap-5">
-                    {searchResults.map((product) => (
-                      <ProductCard key={product._id} product={product} />
+                    {searchResultsWithNew.map(({ product, isNew }, index) => (
+                      <ProductCard
+                        key={`search-${product._id}-${index}`}
+                        product={product}
+                        isNew={isNew}
+                      />
                     ))}
                   </div>
                 ) : (
-                  !loading && (
+                  !isSearching && (
                     <div className="text-gray-400 text-center py-4">
                       No products found matching "{searchQuery}"
                     </div>
@@ -92,17 +158,24 @@ const Product = () => {
                 )}
               </div>
             )}
+
             {/* Categories */}
             <div className="mt-8 overflow-x-auto scrollbar-hide">
-              <div className="flex space-x-4 py-2 min-w-max">
+              <div className="flex space-x-4 py-2 min-w-max scrollbar-hide ">
+                <Link
+                  to="/product"
+                  className={`px-4 py-2 rounded-full transition-colors whitespace-nowrap ${
+                    activeCategory === "All"
+                      ? "bg-Red text-white"
+                      : "bg-[#292B30] text-[#AEAEB2] hover:bg-[#343539]"
+                  }`}
+                >
+                  All
+                </Link>
                 {categories.map((category) => (
                   <Link
-                    to={
-                      category === "All"
-                        ? "/product"
-                        : `/product/category/${category.toLowerCase()}`
-                    }
-                    key={category}
+                    to={`/product/category/${category.toLowerCase()}`}
+                    key={`${category}-productbutton`}
                     className={`px-4 py-2 rounded-full transition-colors whitespace-nowrap ${
                       activeCategory === category
                         ? "bg-Red text-white"
@@ -115,45 +188,49 @@ const Product = () => {
               </div>
             </div>
 
-            <ProductList
-              title="Clothing"
-              path="/product/category/clothing"
-              className="mt-8"
-              isCategoryView={false}
-            />
-            <ProductList
-              title="Cosmetics"
-              path="/product/category/cosmetics"
-              className="mt-16"
-              isCategoryView={false}
-            />
-            <ProductList
-              title="Electronics"
-              path="/product/category/electronics"
-              className="mt-16"
-              isCategoryView={false}
-            />
+            {/* All Products */}
+            {!searchQuery && (
+              <>
+                <ProductList
+                  title="Featured Products"
+                  className="mt-8"
+                  isCategoryView={false}
+                  isFeatured={true}
+                  showViewAll={false}
+                />
+                <ProductList
+                  title="All Products"
+                  className="mt-8"
+                  isCategoryView={true}
+                  category="All"
+                  showViewAll={false}
+                />
+              </>
+            )}
           </>
         ) : (
           <>
+            {/* Category Header */}
             <div className="relative mt-8">
               <button
                 className="absolute top-1/2 left-0 -translate-y-1/2 text-white p-1.5 rounded-full hover:bg-[#292B30] transition-colors"
-                onClick={() => window.history.back()}
+                onClick={handleGoBack}
                 aria-label="Go back"
               >
                 <IoChevronBackOutline className="h-6 w-6 align-middle" />
               </button>
 
-              <h2 className="text-white font-bold text-[34px]  px-4 md:px-0 mx-auto align-middle text-center">
+              <h2 className="text-white font-bold text-[34px] px-4 md:px-0 mx-auto align-middle text-center">
                 {activeCategory}
               </h2>
             </div>
+
             <ProductList
               title={activeCategory}
-              path={`/product/category/${activeCategory.toLowerCase()}`}
               className="mt-8"
               isCategoryView={true}
+              category={activeCategory}
+              showViewAll={false}
             />
           </>
         )}

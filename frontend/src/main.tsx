@@ -1,4 +1,4 @@
-import { lazy, StrictMode, Suspense } from "react";
+import { lazy, StrictMode, Suspense, memo } from "react";
 import "./index.css";
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import { createRoot } from "react-dom/client";
@@ -11,7 +11,17 @@ import ProtectedRoute from "./components/auth/ProtectedRoute.tsx";
 import { SnackbarProvider } from "./context/SnackbarContext.tsx";
 import { Provider } from "react-redux";
 import { store } from "./store/store.ts";
-import { WalletProvider } from "./context/WalletContext.tsx";
+// import { WalletProvider } from "./context/WalletContext.tsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import ErrorBoundary from "./components/error/ErrorBoundary.tsx";
+import { setupGlobalErrorHandling } from "./utils/errorHandling";
+import ReferralHandler from "./components/referrals/ReferralHandler.tsx";
+import { CurrencyProvider } from "./context/CurrencyContext.tsx";
+import { WagmiProvider } from "wagmi";
+import { Web3Provider } from "./context/Web3Context.tsx";
+import { wagmiConfig } from "./utils/config/web3.config.ts";
+import { PERFORMANCE_CONFIG } from "./utils/config/web3.config.ts";
+
 // import GoogleCallback from "./pages/GoogleCallback.tsx";
 
 const Login = lazy(() => import("./pages/Login.tsx"));
@@ -26,40 +36,69 @@ const ViewTrade = lazy(() => import("./pages/ViewTrade.tsx"));
 const ViewTradeDetail = lazy(() => import("./pages/ViewTradeDetail.tsx"));
 const ViewOrderDetail = lazy(() => import("./pages/ViewOrderDetail.tsx"));
 const Notifications = lazy(() => import("./pages/Notifications.tsx"));
-// import About from "./pages/About.tsx";
-// import Market from "./pages/Market.tsx";
-// import Photos from "./pages/Photos.tsx";
-// import Members from "./pages/Members.tsx";
-// import Heros from "./pages/Heros.tsx";
-// import Article from "./pages/Article.tsx";
-// import Contact from "./pages/Contact.tsx";
-// import Account from "./pages/Account.tsx";
-// import NotFound from "./pages/NotFound.tsx";
+const Community = lazy(() => import("./pages/Community.tsx"));
+const ReferralLanding = lazy(() => import("./pages/ReferralLanding.tsx"));
+const Chat = lazy(() => import("./pages/Chat.tsx"));
+const ChatDetail = lazy(() => import("./pages/ChatDetail.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
-const RouterLayout = () => {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: PERFORMANCE_CONFIG.CACHE_DURATION,
+      gcTime: PERFORMANCE_CONFIG.CACHE_DURATION * 2,
+      refetchInterval: false,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
+
+setupGlobalErrorHandling();
+
+const RouterLayout = memo(() => {
   return (
     <Configuration>
-      <Provider store={store}>
-        <WalletProvider>
-          <AuthProvider>
-            <SnackbarProvider>
-              <Layout>
-                <Suspense fallback={<Loadscreen />}>
-                  <Outlet />
-                </Suspense>
-              </Layout>
-            </SnackbarProvider>
-          </AuthProvider>
-        </WalletProvider>
-      </Provider>
+      <SnackbarProvider>
+        <Provider store={store}>
+          <WagmiProvider config={wagmiConfig}>
+            <QueryClientProvider client={queryClient}>
+              <Web3Provider>
+                <AuthProvider>
+                  <CurrencyProvider>
+                    <Layout>
+                      <Suspense fallback={<Loadscreen />}>
+                        <Outlet />
+                      </Suspense>
+                      <ReferralHandler />
+                    </Layout>
+                  </CurrencyProvider>
+                </AuthProvider>
+              </Web3Provider>
+            </QueryClientProvider>
+          </WagmiProvider>
+        </Provider>
+      </SnackbarProvider>
     </Configuration>
   );
-};
+});
+
+RouterLayout.displayName = "RouterLayout";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <RouterLayout />,
+
+    errorElement: (
+      <ErrorBoundary>
+        <NotFound />
+      </ErrorBoundary>
+    ),
     children: [
       {
         index: true,
@@ -88,6 +127,34 @@ const router = createBrowserRouter([
             path: "/notifications",
             element: <Notifications />,
           },
+          {
+            path: "/trades/viewtrades",
+            element: <ViewTrade />,
+          },
+          {
+            path: "/trades/buy/:productId",
+            element: <BuyCheckout />,
+          },
+          {
+            path: "/trades/sell/:productId",
+            element: <SellCheckout />,
+          },
+          {
+            path: "/trades/viewtrades/:tradeId",
+            element: <ViewTradeDetail />,
+          },
+          {
+            path: "/orders/:orderId",
+            element: <ViewOrderDetail />,
+          },
+          {
+            path: "/chat",
+            element: <Chat />,
+          },
+          {
+            path: "/chat/:userId",
+            element: <ChatDetail />,
+          },
         ],
       },
 
@@ -108,24 +175,12 @@ const router = createBrowserRouter([
         element: <Trade />,
       },
       {
-        path: "/trades/viewtrades",
-        element: <ViewTrade />,
+        path: "/community",
+        element: <Community />,
       },
       {
-        path: "/trades/buy/:productId",
-        element: <BuyCheckout />,
-      },
-      {
-        path: "/trades/sell/:productId",
-        element: <SellCheckout />,
-      },
-      {
-        path: "/trades/viewtrades/:tradeId",
-        element: <ViewTradeDetail />,
-      },
-      {
-        path: "/orders/:orderId",
-        element: <ViewOrderDetail />,
+        path: "/referral",
+        element: <ReferralLanding />,
       },
       {
         path: "/load",
@@ -153,13 +208,11 @@ const router = createBrowserRouter([
       //   element: <Contact />,
       // },
       // {
-      //   path: "/account",
-      //   element: <Account />,
-      // },
-      // {
-      //   path: "",
-      //   element: <NotFound />,
-      // },
+
+      {
+        path: "*",
+        element: <NotFound />,
+      },
     ],
   },
 ]);

@@ -62,7 +62,7 @@ export const fetchUserProfile = createAsyncThunk<
 export const updateUserProfile = createAsyncThunk<
   UserProfile,
   Partial<UserProfile>,
-  { rejectValue: string }
+  { rejectValue: string; state: { user: UserState } }
 >("user/updateProfile", async (profileData, { rejectWithValue }) => {
   try {
     const response = await api.updateUserProfile(profileData);
@@ -159,6 +159,77 @@ export const deleteUserProfile = createAsyncThunk<
   }
 });
 
+export const verifySelfIdentity = createAsyncThunk<
+  UserProfile,
+  {
+    proof: {
+      pi_a: string[];
+      pi_b: string[][];
+      pi_c: string[];
+      protocol: string;
+      curve: string;
+    };
+    publicSignals: string[];
+  },
+  { rejectValue: string }
+>("user/verifySelfIdentity", async (verificationData, { rejectWithValue }) => {
+  try {
+    const response = await api.verifySelfIdentity(verificationData);
+
+    if (!response.ok) {
+      return rejectWithValue(response.error || "Failed to verify identity");
+    }
+
+    return response.data;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "An unknown error occurred";
+    return rejectWithValue(message);
+  }
+});
+
+export const getSelfVerificationStatus = createAsyncThunk<
+  { isVerified: boolean; verificationDate?: string },
+  void,
+  { rejectValue: string }
+>("user/getSelfVerificationStatus", async (_, { rejectWithValue }) => {
+  try {
+    const response = await api.getSelfVerificationStatus();
+
+    if (!response.ok) {
+      return rejectWithValue(
+        response.error || "Failed to get verification status"
+      );
+    }
+
+    return response.data;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "An unknown error occurred";
+    return rejectWithValue(message);
+  }
+});
+
+export const revokeSelfVerification = createAsyncThunk<
+  UserProfile,
+  void,
+  { rejectValue: string }
+>("user/revokeSelfVerification", async (_, { rejectWithValue }) => {
+  try {
+    const response = await api.revokeSelfVerification();
+
+    if (!response.ok) {
+      return rejectWithValue(response.error || "Failed to revoke verification");
+    }
+
+    return response.data;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "An unknown error occurred";
+    return rejectWithValue(message);
+  }
+});
+
 const userSlice = createSlice({
   name: "user",
   initialState,
@@ -166,11 +237,19 @@ const userSlice = createSlice({
     clearUserProfile: (state) => {
       state.profile = null;
       state.lastFetched = null;
-      // Also clear API cache
       api.clearCache();
     },
     clearSelectedUser: (state) => {
       state.selectedUser = null;
+    },
+    syncProfileWithSelectedUser: (state) => {
+      if (state.profile) {
+        state.selectedUser = state.profile;
+      }
+    },
+    updateUserFromAuth: (state, action: PayloadAction<UserProfile>) => {
+      state.profile = action.payload;
+      state.lastFetched = Date.now();
     },
   },
   extraReducers: (builder) => {
@@ -183,6 +262,7 @@ const userSlice = createSlice({
         fetchUserProfile.fulfilled,
         (state, action: PayloadAction<UserProfile>) => {
           state.profile = action.payload;
+          state.selectedUser = action.payload;
           state.loading = "succeeded";
           state.lastFetched = Date.now();
         }
@@ -207,7 +287,6 @@ const userSlice = createSlice({
         state.loading = "failed";
         state.error = (action.payload as string) || "Unknown error occurred";
       })
-      // New handlers for getUserById
       .addCase(getUserById.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -223,7 +302,6 @@ const userSlice = createSlice({
         state.loading = "failed";
         state.error = (action.payload as string) || "Unknown error occurred";
       })
-      // New handlers for getUserByEmail
       .addCase(getUserByEmail.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -239,7 +317,6 @@ const userSlice = createSlice({
         state.loading = "failed";
         state.error = (action.payload as string) || "Unknown error occurred";
       })
-      // New handlers for getAllUsers
       .addCase(getAllUsers.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -255,7 +332,6 @@ const userSlice = createSlice({
         state.loading = "failed";
         state.error = (action.payload as string) || "Unknown error occurred";
       })
-      // New handlers for deleteUserProfile
       .addCase(deleteUserProfile.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -266,12 +342,10 @@ const userSlice = createSlice({
           state,
           action: PayloadAction<{ success: boolean; userId: string }>
         ) => {
-          // Remove user from users array if present
           state.users = state.users.filter(
             (user) => user._id !== action.payload.userId
           );
           state.loading = "succeeded";
-          // Clear selected user if it's the deleted user
           if (state.selectedUser?._id === action.payload.userId) {
             state.selectedUser = null;
           }
@@ -280,9 +354,59 @@ const userSlice = createSlice({
       .addCase(deleteUserProfile.rejected, (state, action) => {
         state.loading = "failed";
         state.error = (action.payload as string) || "Unknown error occurred";
+      })
+      .addCase(verifySelfIdentity.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        verifySelfIdentity.fulfilled,
+        (state, action: PayloadAction<UserProfile>) => {
+          state.profile = action.payload;
+          state.selectedUser = action.payload;
+          state.loading = "succeeded";
+          state.lastFetched = Date.now();
+        }
+      )
+      .addCase(verifySelfIdentity.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = (action.payload as string) || "Unknown error occurred";
+      })
+      .addCase(getSelfVerificationStatus.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(getSelfVerificationStatus.fulfilled, (state) => {
+        state.loading = "succeeded";
+      })
+      .addCase(getSelfVerificationStatus.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = (action.payload as string) || "Unknown error occurred";
+      })
+      .addCase(revokeSelfVerification.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        revokeSelfVerification.fulfilled,
+        (state, action: PayloadAction<UserProfile>) => {
+          state.profile = action.payload;
+          state.selectedUser = action.payload;
+          state.loading = "succeeded";
+          state.lastFetched = Date.now();
+        }
+      )
+      .addCase(revokeSelfVerification.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = (action.payload as string) || "Unknown error occurred";
       });
   },
 });
 
-export const { clearUserProfile, clearSelectedUser } = userSlice.actions;
+export const {
+  clearUserProfile,
+  clearSelectedUser,
+  syncProfileWithSelectedUser,
+  updateUserFromAuth,
+} = userSlice.actions;
 export default userSlice.reducer;

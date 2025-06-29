@@ -6,7 +6,6 @@ export const selectUserLoading = (state: RootState) => state.user.loading;
 export const selectUserError = (state: RootState) => state.user.error;
 export const selectAllUsers = (state: RootState) => state.user.users;
 export const selectSelectedUser = (state: RootState) => state.user.selectedUser;
-
 // Format date as MM/DD/YYYY
 const formatDate = (dateString: string | undefined): string => {
   if (!dateString) return "";
@@ -79,4 +78,16 @@ export const selectUserPoints = createSelector([selectUserProfile], (profile) =>
         available: profile.availablePoints || 0,
       }
     : { total: 0, available: 0 }
+);
+
+export const selectSelfVerificationStatus = (state: RootState) =>
+  state.user.selectedUser?.isVerified || false;
+
+export const selectUserVerificationDetails = createSelector(
+  [selectSelectedUser],
+  (selectedUser) => ({
+    isVerified: selectedUser?.isVerified || false,
+    verificationDate: selectedUser?.verificationDate || null,
+    verificationMethod: selectedUser?.verificationMethod || null,
+  })
 );

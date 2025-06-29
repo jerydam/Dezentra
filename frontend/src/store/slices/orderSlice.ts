@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { Order } from "../../utils/types";
+import { Order, OrderStatus, OrderStatusUpdate } from "../../utils/types";
 import { api } from "../../utils/services/apiService";
 
 interface OrderState {
@@ -22,8 +22,10 @@ export const createOrder = createAsyncThunk<
   Order,
   {
     product: string;
-    seller: string;
-    amount: number;
+    quantity: number;
+    logisticsProviderWalletAddress: string;
+    // seller: string;
+    // amount: string;
   },
   { rejectValue: string }
 >("orders/create", async (orderData, { rejectWithValue }) => {
@@ -52,7 +54,7 @@ export const fetchUserOrders = createAsyncThunk<
       if (!response.ok) {
         return rejectWithValue(response.error || "Failed to fetch orders");
       }
-      return response.data;
+      return response.data.data.orders;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Unknown error"
@@ -75,7 +77,7 @@ export const fetchSellerOrders = createAsyncThunk<
           response.error || "Failed to fetch seller orders"
         );
       }
-      return response.data;
+      return response.data.data.orders;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Unknown error"
@@ -103,12 +105,19 @@ export const fetchOrderById = createAsyncThunk<
 });
 
 export const updateOrderStatus = createAsyncThunk<
-  Order,
-  { orderId: string; status: string },
+  OrderStatusUpdate,
+  {
+    orderId: string;
+    details: {
+      purchaseId?: string;
+      status?: OrderStatus;
+      [key: string]: string | OrderStatus | undefined;
+    };
+  },
   { rejectValue: string }
->("orders/updateStatus", async ({ orderId, status }, { rejectWithValue }) => {
+>("orders/updateStatus", async ({ orderId, details }, { rejectWithValue }) => {
   try {
-    const response = await api.updateOrderStatus(orderId, status);
+    const response = await api.updateOrderStatus(orderId, details);
     if (!response.ok) {
       return rejectWithValue(response.error || "Failed to update order status");
     }
@@ -221,16 +230,17 @@ const orderSlice = createSlice({
       })
       .addCase(
         updateOrderStatus.fulfilled,
-        (state, action: PayloadAction<Order>) => {
+        (state, action: PayloadAction<OrderStatusUpdate>) => {
           state.loading = "succeeded";
-          state.currentOrder = action.payload;
+          // state.currentOrder.status = action.payload.status;
 
           // Update order in orders array
           const index = state.orders.findIndex(
             (o) => o._id === action.payload._id
           );
           if (index !== -1) {
-            state.orders[index] = action.payload;
+            state.orders[index].status = action.payload.status;
+            state.orders[index].updatedAt = action.payload.updatedAt;
           }
 
           // Update order in sellerOrders array
@@ -238,7 +248,9 @@ const orderSlice = createSlice({
             (o) => o._id === action.payload._id
           );
           if (sellerIndex !== -1) {
-            state.sellerOrders[sellerIndex] = action.payload;
+            state.sellerOrders[sellerIndex].status = action.payload.status;
+            state.sellerOrders[sellerIndex].updatedAt =
+              action.payload.updatedAt;
           }
         }
       )

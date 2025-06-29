@@ -1,4 +1,11 @@
-import { CreateTradeParams, TradeResponse, UserProfile } from "../types";
+import {
+  CreateTradeParams,
+  MarkReadParams,
+  OrderStatus,
+  SendMessageParams,
+  TradeResponse,
+  UserProfile,
+} from "../types";
 const API_URL = import.meta.env.VITE_API_URL;
 export const fetchWithAuth = async (
   endpoint: string,
@@ -25,7 +32,10 @@ export const fetchWithAuth = async (
     }
     const data = await response.json().catch(() => null);
     return { ok: true, status: response.status, data, error: null };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      throw error;
+    }
     return {
       ok: false,
       status: 0,
@@ -78,7 +88,6 @@ export const api = {
       body: formData,
     });
   },
-  // New user endpoints
   getUserById: async (userId: string) => {
     const key = cacheKey(`/users/${userId}`);
     if (abortControllers.has(key)) {
@@ -127,18 +136,74 @@ export const api = {
       method: "DELETE",
     });
   },
-  // New product methods
-  getProducts: async (skipCache = false) => {
+
+  verifySelfIdentity: async (verificationData: {
+    proof: {
+      pi_a: string[];
+      pi_b: string[][];
+      pi_c: string[];
+      protocol: string;
+      curve: string;
+    };
+    publicSignals: string[];
+  }) => {
+    // Clear cache on verification
+    requestCache.delete(cacheKey("/users/profile"));
+    requestCache.delete(cacheKey("/users/self/status"));
+
+    return fetchWithAuth("/users/verify-self", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(verificationData),
+    });
+  },
+
+  getSelfVerificationStatus: async (skipCache = false) => {
+    const key = cacheKey("/users/self/status");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+
+    const result = await fetchWithAuth("/users/self/status", {
+      signal: controller.signal,
+    });
+
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+
+    return result;
+  },
+
+  revokeSelfVerification: async () => {
+    // Clear cache on revocation
+    requestCache.delete(cacheKey("/users/profile"));
+    requestCache.delete(cacheKey("/users/self/status"));
+
+    return fetchWithAuth("/users/self/revoke", {
+      method: "DELETE",
+    });
+  },
+  getProducts: async (skipCache = false, preventAbort = false) => {
     const key = cacheKey("/products");
     if (!skipCache && requestCache.has(key)) {
       return requestCache.get(key);
     }
     // Cancel any existing request
-    if (abortControllers.has(key)) {
+    if (!preventAbort && abortControllers.has(key)) {
       abortControllers.get(key).abort();
     }
     const controller = new AbortController();
-    abortControllers.set(key, controller);
+    if (!preventAbort) {
+      abortControllers.set(key, controller);
+    }
     const result = await fetchWithAuth("/products", {
       signal: controller.signal,
     });
@@ -171,17 +236,20 @@ export const api = {
       signal: controller.signal,
     });
   },
-  getSponsoredProducts: async (skipCache = false) => {
+  getSponsoredProducts: async (skipCache = false, preventAbort = false) => {
     const key = cacheKey("/products/sponsored");
     if (!skipCache && requestCache.has(key)) {
       return requestCache.get(key);
     }
     // Cancel any existing request
-    if (abortControllers.has(key)) {
+    if (!preventAbort && abortControllers.has(key)) {
       abortControllers.get(key).abort();
     }
     const controller = new AbortController();
     abortControllers.set(key, controller);
+    if (!preventAbort) {
+      abortControllers.set(key, controller);
+    }
     const result = await fetchWithAuth("/products/sponsored", {
       signal: controller.signal,
     });
@@ -289,8 +357,10 @@ export const api = {
   // Orders API endpoints
   createOrder: async (orderData: {
     product: string;
-    seller: string;
-    amount: number;
+    quantity: number;
+    logisticsProviderWalletAddress: string;
+    // seller: string;
+    // amount: string;
   }) => {
     return fetchWithAuth("/orders", {
       method: "POST",
@@ -330,15 +400,22 @@ export const api = {
       signal: controller.signal,
     });
   },
-  updateOrderStatus: async (orderId: string, status: string) => {
+  updateOrderStatus: async (
+    orderId: string,
+    details: {
+      purchaseId?: string;
+      status?: OrderStatus;
+      [key: string]: string | OrderStatus | undefined;
+    }
+  ) => {
     // Clear cache on update
     requestCache.delete(cacheKey("/orders?type=buyer"));
     requestCache.delete(cacheKey("/orders?type=seller"));
     requestCache.delete(cacheKey(`/orders/${orderId}`));
-    return fetchWithAuth(`/orders/${orderId}/status`, {
+    return fetchWithAuth(`/orders/${orderId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(details),
     });
   },
   createTrade: async (
@@ -355,6 +432,85 @@ export const api = {
       body: JSON.stringify(tradeData),
     });
   },
+  confirmDelivery: async (
+    tradeId: string
+  ): Promise<{
+    ok: boolean;
+    status: number;
+    data: TradeResponse | null;
+    error: string | null;
+  }> => {
+    return fetchWithAuth(`/trades/${tradeId}/confirm-delivery`, {
+      method: "POST",
+    });
+  },
+  registerLogisticsProvider: async (providerAddress: string) => {
+    return fetchWithAuth("/contracts/admin/register-logistics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ providerAddress }),
+    });
+  },
+
+  getTradeById: async (tradeId: string) => {
+    const key = cacheKey(`/contracts/trades/${tradeId}`);
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    return fetchWithAuth(`/contracts/trades/${tradeId}`, {
+      signal: controller.signal,
+    });
+  },
+
+  getTradesBySeller: async () => {
+    const key = cacheKey("/contracts/trades/seller/list");
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    return fetchWithAuth("/contracts/trades/seller/list", {
+      signal: controller.signal,
+    });
+  },
+
+  getTradesByBuyer: async () => {
+    const key = cacheKey("/contracts/trades/buyer/list");
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    return fetchWithAuth("/contracts/trades/buyer/list", {
+      signal: controller.signal,
+    });
+  },
+
+  buyTrade: async (
+    tradeId: string,
+    data: { quantity: number; logisticsProvider: string }
+  ) => {
+    return fetchWithAuth(`/contracts/trades/${tradeId}/buy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  },
+
+  getLogisticsProviders: async () => {
+    const key = cacheKey("/contracts/logistics");
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    return fetchWithAuth("/contracts/logistics", {
+      signal: controller.signal,
+    });
+  },
+
   raiseDispute: async (orderId: string, reason: string) => {
     // Clear cache on update
     requestCache.delete(cacheKey("/orders?type=buyer"));
@@ -366,6 +522,192 @@ export const api = {
       body: JSON.stringify({ reason }),
     });
   },
+
+  // Watchlist API endpoints
+  addToWatchlist: async (productId: string) => {
+    return fetchWithAuth(`/watchlist/${productId}`, {
+      method: "POST",
+    });
+  },
+  getUserWatchlist: async (skipCache = false) => {
+    const key = cacheKey("/watchlist");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    const result = await fetchWithAuth("/watchlist", {
+      signal: controller.signal,
+    });
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+    return result;
+  },
+  checkWatchlist: async (productId: string) => {
+    const key = cacheKey(`/watchlist/${productId}/check`);
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    return fetchWithAuth(`/watchlist/${productId}/check`, {
+      signal: controller.signal,
+    });
+  },
+  removeFromWatchlist: async (productId: string) => {
+    // Clear cache on delete
+    requestCache.delete(cacheKey("/watchlist"));
+    return fetchWithAuth(`/watchlist/${productId}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Rewards API endpoints
+  getUserRewards: async (skipCache = false) => {
+    const key = cacheKey("/rewards");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    const result = await fetchWithAuth("/rewards", {
+      signal: controller.signal,
+    });
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+    return result;
+  },
+  getRewardsSummary: async (skipCache = false) => {
+    const key = cacheKey("/rewards/summary");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    const result = await fetchWithAuth("/rewards/summary", {
+      signal: controller.signal,
+    });
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+    return result;
+  },
+
+  // Notifications API endpoints
+  markNotificationsAsRead: async (notificationIds: string[]) => {
+    // Clear cache when notifications are read
+    requestCache.delete(cacheKey("/notifications"));
+    requestCache.delete(cacheKey("/notifications/unread-count"));
+    return fetchWithAuth("/notifications/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notificationIds }),
+    });
+  },
+  getUserNotifications: async (skipCache = false) => {
+    const key = cacheKey("/notifications");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    const result = await fetchWithAuth("/notifications", {
+      signal: controller.signal,
+    });
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+    return result;
+  },
+  getUnreadNotificationCount: async (skipCache = false) => {
+    const key = cacheKey("/notifications/unread-count");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+    if (abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    abortControllers.set(key, controller);
+    const result = await fetchWithAuth("/notifications/unread-count", {
+      signal: controller.signal,
+    });
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+    return result;
+  },
+
+  // chats API endpoints
+
+  sendMessage: async (messageData: SendMessageParams) => {
+    return fetchWithAuth("/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(messageData),
+    });
+  },
+
+  getConversation: async (userId: string, preventAbort = false) => {
+    const key = cacheKey(`/messages/${userId}`);
+    if (!preventAbort && abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    if (!preventAbort) {
+      abortControllers.set(key, controller);
+    }
+
+    return fetchWithAuth(`/messages/${userId}`, {
+      signal: controller.signal,
+    });
+  },
+
+  markMessagesAsRead: async (params: MarkReadParams) => {
+    // Clear cache when messages are marked as read
+    requestCache.delete(cacheKey("/messages"));
+    return fetchWithAuth("/messages/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+  },
+
+  getConversations: async (skipCache = false, preventAbort = false) => {
+    const key = cacheKey("/messages");
+    if (!skipCache && requestCache.has(key)) {
+      return requestCache.get(key);
+    }
+    if (!preventAbort && abortControllers.has(key)) {
+      abortControllers.get(key).abort();
+    }
+    const controller = new AbortController();
+    if (!preventAbort) {
+      abortControllers.set(key, controller);
+    }
+    const result = await fetchWithAuth("/messages", {
+      signal: controller.signal,
+    });
+    if (result.ok) {
+      requestCache.set(key, result);
+    }
+    return result;
+  },
+
   clearCache: () => {
     requestCache.clear();
   },

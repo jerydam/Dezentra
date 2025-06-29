@@ -12,6 +12,8 @@ import {
 } from "react-icons/ri";
 import { Avatar2, TwoFactor } from "../../../pages";
 import { lazy, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
+import { useNavigate } from "react-router";
 const EditProfile = lazy(() => import("../edit/EditProfile"));
 
 interface SettingItemProps {
@@ -39,10 +41,10 @@ const SettingItem = ({ icon, label, onClick, delay }: SettingItemProps) => {
 };
 
 const Settings = ({
-  showSettings,
+  setViewState,
   profileData,
 }: {
-  showSettings: React.Dispatch<React.SetStateAction<boolean>>;
+  setViewState: (state: "overview" | "settings" | "edit-profile") => void;
   profileData: {
     name: string;
     dob: string;
@@ -50,6 +52,8 @@ const Settings = ({
     phone: string;
   };
 }) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [showEditProfile, setShowEditProfile] = useState(false);
   const settingSections: { items: SettingItemProps[] }[] = [
     {
@@ -64,6 +68,8 @@ const Settings = ({
           icon: <RiContactsBook2Fill className="text-white" />,
           label: "Join Our Community",
           delay: 0.2,
+          onClick: () =>
+            window.open("https://t.me/dezenmart_commuinity", "_blank"),
         },
       ],
     },
@@ -80,7 +86,6 @@ const Settings = ({
           delay: 0.4,
         },
         {
-          // icon: <RiKey2Fill className="text-white" />,
           icon: (
             <img
               src={TwoFactor}
@@ -114,6 +119,10 @@ const Settings = ({
           icon: <RiLogoutBoxRLine className="text-white" />,
           label: "Log Out",
           delay: 1.2,
+          onClick: () => {
+            logout();
+            navigate("/");
+          },
         },
       ],
     },
@@ -124,7 +133,7 @@ const Settings = ({
       {showEditProfile ? (
         <EditProfile
           avatar={Avatar2}
-          showEditProfile={setShowEditProfile}
+          setViewState={() => setViewState("settings")}
           currentProfile={profileData}
         />
       ) : (
@@ -139,7 +148,7 @@ const Settings = ({
               aria-label="Settings"
               className="hover:opacity-80 transition-opacity"
               transition={{ type: "spring", stiffness: 300 }}
-              onClick={() => showSettings(false)}
+              onClick={() => setViewState("overview")}
             >
               <LiaAngleLeftSolid className="text-white text-2xl" />
             </motion.button>
