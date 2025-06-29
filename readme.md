@@ -122,4 +122,4 @@ Contracts are deployed on Avalanche Fuji, enabling low-cost, fast transaction se
 
 ---
 
-**DezentraLogistics** — Redefining e-commerce. One chain at a time.
+**DezentraLogistics** — Buy With Trust. Pay From Any Chain.
